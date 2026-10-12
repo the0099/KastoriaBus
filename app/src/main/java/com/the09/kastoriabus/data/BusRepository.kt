@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
  *   2. the saved copy, if it's less than 7 days old (no network at all: fast, and gentle on the server)
  *   3. the internet (and saves the answer)
  *   4. the saved copy even if it's old, when there is no internet
+ *   5. the copy built into the app ([StarterPack]) for stops, lines and routes
  *
  * All functions are `suspend`: call them from a coroutine. They throw an exception
  * (usually IOException) only when there's no internet AND nothing saved.
@@ -43,6 +44,7 @@ import java.util.concurrent.ConcurrentHashMap
 class BusRepository(
     private val api: CitybusApi,
     private val disk: DiskCache,
+    private val starter: StarterPack? = null,
     private val language: () -> String,
 ) {
     private val memory = ConcurrentHashMap<String, Any>()
@@ -59,14 +61,14 @@ class BusRepository(
     suspend fun getStops(forceRefresh: Boolean = false): List<Stop> {
         val lang = language()
         return fetch("stops|$lang", typeOf<List<Stop>>(), forceRefresh, fallbackKeys = listOf("stops|${other(lang)}")) {
-            api.getStops(lang)
+            api.getStops(lang).ifEmpty { throw IOException("The server sent no stops") }
         }
     }
 
     suspend fun getLines(forceRefresh: Boolean = false): List<Line> {
         val lang = language()
         return fetch("lines|$lang", typeOf<List<Line>>(), forceRefresh, fallbackKeys = listOf("lines|${other(lang)}")) {
-            api.getLines(lang)
+            api.getLines(lang).ifEmpty { throw IOException("The server sent no lines") }
         }
     }
 
@@ -166,12 +168,14 @@ class BusRepository(
                 if (e !is IOException && e !is HttpException) throw e
                 // "Download fresh" (the offline download button) must really download.
                 if (forceRefresh) throw e
-                // No internet (or the server failed): use whatever we saved, however old.
-                val saved = (listOf(key) + fallbackKeys).firstNotNullOfOrNull { readDisk<T>(it, type) }
+                // No internet (or the server failed): use whatever we saved, however old,
+                // and if the phone has nothing yet, the copy built into the app.
+                val saved = (listOf(key) + fallbackKeys).firstNotNullOfOrNull { readDisk<T>(it, type) }?.value
+                    ?: withContext(Dispatchers.IO) { starter?.read<T>(key, type) }
                     ?: throw e
                 _usingSavedData.value = true
-                memory[key] = saved.value
-                saved.value
+                memory[key] = saved
+                saved
             }
         }
     }

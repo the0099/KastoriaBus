@@ -101,5 +101,5 @@
     <string name="offline_last">Έτοιμο για χρήση χωρίς internet ✓\nΤελευταία λήψη: %1$s</string>
     <string name="offline_never">Δεν έχει γίνει ακόμα λήψη. Τα δεδομένα που βλέπεις αποθηκεύονται αυτόματα.</string>
     <string name="offline_size">Αποθηκευμένα στο κινητό: %1$.1f MB (χωρίς τον χάρτη)</string>
-    <string name="offline_banner">Χωρίς internet · εμφανίζονται αποθηκευμένα δεδομένα</string>
+    <string name="offline_banner">Χωρίς σύνδεση με τον server · αποθηκευμένα δεδομένα</string>
 </resources>

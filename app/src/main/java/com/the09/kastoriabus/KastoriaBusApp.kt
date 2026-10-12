@@ -7,6 +7,7 @@ import com.the09.kastoriabus.data.FavoritesStore
 import com.the09.kastoriabus.data.LocationHelper
 import com.the09.kastoriabus.data.OfflineDownloader
 import com.the09.kastoriabus.data.OfflineMapDownloader
+import com.the09.kastoriabus.data.StarterPack
 import com.the09.kastoriabus.data.remote.AuthInterceptor
 import com.the09.kastoriabus.data.remote.CITYBUS_BASE_URL
 import com.the09.kastoriabus.data.remote.CitybusApi
@@ -69,7 +70,9 @@ class KastoriaBusApp : Application() {
         // R.string.api_language is "el" in values/ and "en" in values-en/,
         // so the API language always matches the language of the app's texts.
         // Everything downloaded is also saved on the phone, for use without internet.
-        repository = BusRepository(api, DiskCache(filesDir)) { getString(R.string.api_language) }
+        repository = BusRepository(api, DiskCache(filesDir), StarterPack(open = { path -> assets.open(path) })) {
+            getString(R.string.api_language)
+        }
         favorites = FavoritesStore(this)
         location = LocationHelper(this)
         offline = OfflineDownloader(this, repository, OfflineMapDownloader(this), appScope)
