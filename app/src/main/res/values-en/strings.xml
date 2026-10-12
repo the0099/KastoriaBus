@@ -1,0 +1,17 @@
+<resources>
+    <string name="api_language" translatable="false">en</string>
+
+    <!-- Temporary data check screen (step 2) -->
+    <string name="test_title">Data check</string>
+    <string name="test_loading">Loading…</string>
+    <string name="test_stops">Stops: %1$d</string>
+    <string name="test_lines">Lines: %1$d</string>
+    <string name="test_route_stops">Stops on route %1$s: %2$d</string>
+    <string name="test_shapes">Map shapes, line %1$s: %2$d</string>
+    <string name="test_timetable">Departures today at stop %1$s: %2$d</string>
+    <string name="test_next">Next: %1$s</string>
+    <string name="test_next_none">No more departures today</string>
+    <string name="test_live">Buses coming now (30 min): %1$d</string>
+    <string name="test_error">Error: %1$s</string>
+    <string name="test_retry">Try again</string>
+</resources>
