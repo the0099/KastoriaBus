@@ -6,21 +6,28 @@ import androidx.lifecycle.viewModelScope
 import com.the09.kastoriabus.data.BusRepository
 import com.the09.kastoriabus.data.FavoritesStore
 import com.the09.kastoriabus.data.LocationHelper
+import com.the09.kastoriabus.data.estimate.RoutePlan
 import com.the09.kastoriabus.data.model.Line
 import com.the09.kastoriabus.data.model.RouteShape
 import com.the09.kastoriabus.data.model.Stop
 import com.the09.kastoriabus.ui.common.LoadState
 import com.the09.kastoriabus.ui.common.loadCatching
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalTime
 
 /** A point on the map, without depending on the map library here. */
 data class GeoPoint(val latitude: Double, val longitude: Double)
@@ -30,6 +37,16 @@ sealed interface CameraCommand {
     data class Center(val point: GeoPoint, val zoom: Double) : CameraCommand
     data class Fit(val points: List<GeoPoint>) : CameraCommand
 }
+
+/** A bus drawn on the map at its estimated position. */
+data class BusMarker(
+    val id: String,
+    val routeName: String,
+    val position: GeoPoint,
+    val nextStopName: String,
+    val secondsToNextStop: Int,
+    val departureTime: String, // when it left the first stop, "HH:mm"
+)
 
 data class MapUiState(
     val isLoading: Boolean = true,
@@ -43,6 +60,9 @@ data class MapUiState(
     val selectedStopIsFavorite: Boolean = false,
     val selectedStopDistance: Float? = null,
     val userLocation: Location? = null,
+    val buses: List<BusMarker> = emptyList(),     // estimated buses of the chosen line
+    val busesLoading: Boolean = false,
+    val selectedBus: BusMarker? = null,
 )
 
 /**
@@ -62,7 +82,17 @@ class MapViewModel(
     private val shapes = MutableStateFlow<List<RouteShape>>(emptyList())
     private val selectedStopCode = MutableStateFlow<String?>(null)
     private val userLocation = MutableStateFlow<Location?>(null)
-    private var shapesJob: Job? = null
+    private var lineJob: Job? = null
+
+    // Estimated buses: one plan per route of the chosen line, and a clock.
+    private val plans = MutableStateFlow<LoadState<List<RoutePlan>>?>(null)
+    private val selectedBusId = MutableStateFlow<String?>(null)
+    private val clock = flow {
+        while (true) {
+            emit(LocalTime.now(BusRepository.ATHENS).toSecondOfDay())
+            delay(3_000) // the buses move a little every 3 seconds
+        }
+    }
 
     private val _camera = Channel<CameraCommand>(Channel.BUFFERED)
     /** The screen applies these to the map once it's ready. */
@@ -72,7 +102,7 @@ class MapViewModel(
         Triple(line, shapes, stop)
     }
 
-    val uiState: StateFlow<MapUiState> = combine(
+    private val baseState: Flow<MapUiState> = combine(
         data, selection, userLocation, favorites.stopCodes
     ) { data, (lineCode, shapes, stopCode), location, favoriteStops ->
         when (data) {
@@ -105,6 +135,27 @@ class MapViewModel(
                 )
             }
         }
+    }
+
+    val uiState: StateFlow<MapUiState> = combine(baseState, plans, clock, selectedBusId) { base, plans, now, busId ->
+        val routeNames = base.selectedLine?.routes?.associate { it.code to it.name }.orEmpty()
+        val buses = (plans as? LoadState.Ready)?.data.orEmpty().flatMap { plan ->
+            plan.busesAt(now).map { bus ->
+                BusMarker(
+                    id = "${bus.routeCode}-${bus.tripStartSeconds}",
+                    routeName = routeNames[bus.routeCode] ?: bus.routeCode,
+                    position = GeoPoint(bus.position.lat, bus.position.lon),
+                    nextStopName = plan.stops[bus.nextStopIndex].name,
+                    secondsToNextStop = bus.secondsToNextStop,
+                    departureTime = LocalTime.ofSecondOfDay(bus.tripStartSeconds.toLong()).toString(),
+                )
+            }
+        }
+        base.copy(
+            buses = buses,
+            busesLoading = plans == LoadState.Loading,
+            selectedBus = buses.firstOrNull { it.id == busId },
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapUiState())
 
     init {
@@ -133,13 +184,18 @@ class MapViewModel(
         }
     }
 
-    /** Chooses a line (or null for "all lines"), draws its routes and zooms to them. */
+    /**
+     * Chooses a line (or null for "all lines"): draws its routes, zooms to them,
+     * then works out where its buses should be right now.
+     */
     fun selectLine(lineCode: String?) {
         selectedLineCode.value = lineCode
         shapes.value = emptyList()
-        shapesJob?.cancel()
+        plans.value = null
+        selectedBusId.value = null
+        lineJob?.cancel()
         if (lineCode == null) return
-        shapesJob = viewModelScope.launch {
+        lineJob = viewModelScope.launch {
             val result = loadCatching { repository.getLineShapes(lineCode) }
             if (result is LoadState.Ready) {
                 shapes.value = result.data
@@ -148,15 +204,33 @@ class MapViewModel(
                 }
                 if (points.isNotEmpty()) _camera.trySend(CameraCommand.Fit(points))
             }
+            // One plan per route of the line, downloaded side by side.
+            val line = (data.value as? LoadState.Ready)?.data?.second?.firstOrNull { it.code == lineCode }
+                ?: return@launch
+            plans.value = LoadState.Loading
+            plans.value = loadCatching {
+                coroutineScope {
+                    line.routes.map { route ->
+                        async { repository.getRoutePlan(lineCode, route.code) }
+                    }.awaitAll()
+                }
+            }
         }
     }
 
     fun onStopTapped(stopCode: String) {
+        selectedBusId.value = null
         selectedStopCode.value = stopCode
     }
 
-    fun clearSelectedStop() {
+    fun onBusTapped(busId: String) {
         selectedStopCode.value = null
+        selectedBusId.value = busId
+    }
+
+    fun clearSelection() {
+        selectedStopCode.value = null
+        selectedBusId.value = null
     }
 
     fun onToggleFavorite(stopCode: String) = favorites.toggleStop(stopCode)

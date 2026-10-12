@@ -65,4 +65,19 @@
         <item quantity="one">%1$d route</item>
         <item quantity="other">%1$d routes</item>
     </plurals>
+
+    <!-- Step 5: estimated bus positions -->
+    <string name="estimate_pick_line">Pick a line to see its buses</string>
+    <string name="estimate_loading">Working out where the buses are…</string>
+    <string name="estimate_no_buses">No buses on the road right now</string>
+    <plurals name="estimate_bus_count">
+        <item quantity="one">%1$d bus on the road (estimate)</item>
+        <item quantity="other">%1$d buses on the road (estimate)</item>
+    </plurals>
+    <string name="estimate_departed">Left the first stop at %1$s</string>
+    <string name="estimate_next_stop">Next stop</string>
+    <string name="estimate_arriving">arriving</string>
+    <string name="estimate_in_minutes">in ~%1$d min</string>
+    <string name="estimate_note">Estimated from the timetable, not GPS. If the bus is late, its real position will differ.</string>
+    <string name="estimate_line_note">Bus positions are estimated from the timetable.</string>
 </resources>

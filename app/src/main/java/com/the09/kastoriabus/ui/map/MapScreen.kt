@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -41,6 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +62,7 @@ import com.the09.kastoriabus.ui.common.formatDistance
 import com.the09.kastoriabus.ui.common.lineColor
 import com.the09.kastoriabus.ui.common.lineColorHex
 import com.the09.kastoriabus.ui.common.lineNumber
+import com.the09.kastoriabus.ui.common.prettyRouteName
 import com.the09.kastoriabus.ui.stops.LOCATION_PERMISSIONS
 import com.the09.kastoriabus.ui.theme.LakeBlue
 import org.maplibre.android.geometry.LatLng
@@ -89,12 +93,16 @@ fun MapScreen(
             shapes = state.shapes,
             shapeColorHex = selectedLine?.let { lineColorHex(it.code, it.color) } ?: "#1449C8",
             selectedStop = state.selectedStop,
+            buses = state.buses,
+            selectedBus = state.selectedBus,
+            busColor = (selectedLine?.let { lineColor(it.code, it.color) } ?: LakeBlue).toArgb(),
             userLatLng = state.userLocation?.let { LatLng(it.latitude, it.longitude) },
             cameraCommands = viewModel.cameraCommands,
-            contentPaddingTop = 190.dp,
+            contentPaddingTop = 240.dp,
             contentPaddingBottom = 60.dp,
             onStopClick = viewModel::onStopTapped,
-            onMapClick = viewModel::clearSelectedStop,
+            onBusClick = viewModel::onBusTapped,
+            onMapClick = viewModel::clearSelection,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -104,6 +112,11 @@ fun MapScreen(
                 ?: stringResource(R.string.map_all_stops, state.visibleStops.size)
         ) {
             LineChips(state.lines, selectedLine?.code, viewModel::selectLine)
+            EstimateStatus(
+                hasLine = selectedLine != null,
+                loading = state.busesLoading,
+                busCount = state.buses.size,
+            )
         }
 
         Column(
@@ -122,6 +135,20 @@ fun MapScreen(
                 Icon(painterResource(R.drawable.ic_my_location), contentDescription = stringResource(R.string.map_my_location))
             }
             AnimatedVisibility(
+                visible = state.selectedBus != null,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it },
+            ) {
+                state.selectedBus?.let { bus ->
+                    SelectedBusCard(
+                        bus = bus,
+                        line = selectedLine,
+                        onClose = viewModel::clearSelection,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+            }
+            AnimatedVisibility(
                 visible = state.selectedStop != null,
                 enter = slideInVertically { it },
                 exit = slideOutVertically { it },
@@ -133,7 +160,7 @@ fun MapScreen(
                         distance = state.selectedStopDistance,
                         isFavorite = state.selectedStopIsFavorite,
                         onToggleFavorite = { viewModel.onToggleFavorite(stop.code) },
-                        onClose = viewModel::clearSelectedStop,
+                        onClose = viewModel::clearSelection,
                         onDetailsClick = { onStopDetailsClick(stop.code) },
                         onLineClick = onLineClick,
                         modifier = Modifier.padding(top = 12.dp)
@@ -251,6 +278,117 @@ private fun SelectedStopCard(
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
+        }
+    }
+}
+
+/**
+ * The small line under the chips: asks to pick a line, or says how many buses
+ * are on the road, always reminding that the positions are an estimate.
+ */
+@Composable
+private fun EstimateStatus(hasLine: Boolean, loading: Boolean, busCount: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.18f))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color.White)
+        } else {
+            Icon(
+                painterResource(R.drawable.ic_bus),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Text(
+            text = when {
+                !hasLine -> stringResource(R.string.estimate_pick_line)
+                loading -> stringResource(R.string.estimate_loading)
+                busCount == 0 -> stringResource(R.string.estimate_no_buses)
+                else -> pluralStringResource(R.plurals.estimate_bus_count, busCount, busCount)
+            },
+            style = MaterialTheme.typography.labelLarge,
+            color = Color.White,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+    }
+}
+
+/** The card that slides up when you tap a bus. */
+@Composable
+private fun SelectedBusCard(
+    bus: BusMarker,
+    line: Line?,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ElevatedCard(
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (line != null) LineBadge(line.code, line.color, size = 44.dp)
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(
+                        prettyRouteName(bus.routeName),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        stringResource(R.string.estimate_departed, bus.departureTime),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(top = 12.dp, end = 12.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(12.dp)
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.estimate_next_stop),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        bus.nextStopName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                val minutes = bus.secondsToNextStop / 60
+                Pill(
+                    text = if (minutes < 1) stringResource(R.string.estimate_arriving)
+                           else stringResource(R.string.estimate_in_minutes, minutes),
+                    container = MaterialTheme.colorScheme.secondary,
+                    content = Color.White,
+                )
+            }
+            Text(
+                stringResource(R.string.estimate_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp, end = 12.dp)
+            )
         }
     }
 }

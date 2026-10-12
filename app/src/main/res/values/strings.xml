@@ -67,4 +67,19 @@
         <item quantity="one">%1$d διαδρομή</item>
         <item quantity="other">%1$d διαδρομές</item>
     </plurals>
+
+    <!-- Step 5: estimated bus positions -->
+    <string name="estimate_pick_line">Διάλεξε γραμμή για να δεις τα λεωφορεία της</string>
+    <string name="estimate_loading">Υπολογισμός θέσεων λεωφορείων…</string>
+    <string name="estimate_no_buses">Κανένα λεωφορείο στον δρόμο αυτή τη στιγμή</string>
+    <plurals name="estimate_bus_count">
+        <item quantity="one">%1$d λεωφορείο στον δρόμο (εκτίμηση)</item>
+        <item quantity="other">%1$d λεωφορεία στον δρόμο (εκτίμηση)</item>
+    </plurals>
+    <string name="estimate_departed">Αναχώρηση από την αφετηρία %1$s</string>
+    <string name="estimate_next_stop">Επόμενη στάση</string>
+    <string name="estimate_arriving">φτάνει</string>
+    <string name="estimate_in_minutes">σε ~%1$d′</string>
+    <string name="estimate_note">Εκτιμώμενη θέση με βάση το πρόγραμμα, όχι GPS. Αν το λεωφορείο έχει καθυστέρηση, η θέση θα διαφέρει.</string>
+    <string name="estimate_line_note">Οι θέσεις των λεωφορείων είναι εκτίμηση με βάση το πρόγραμμα.</string>
 </resources>

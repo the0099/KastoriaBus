@@ -1,6 +1,12 @@
 package com.the09.kastoriabus.ui.map
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.RectF
+import androidx.core.content.ContextCompat
+import com.the09.kastoriabus.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +38,7 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -46,7 +53,11 @@ private const val SRC_SHAPES = "shapes"
 private const val SRC_STOPS = "stops"
 private const val SRC_SELECTED = "selected"
 private const val SRC_USER = "user"
+private const val SRC_BUSES = "buses"
+private const val SRC_SELECTED_BUS = "selected-bus"
 private const val LAYER_STOPS = "stops-layer"
+private const val LAYER_BUSES = "buses-layer"
+private const val BUS_ICON = "bus-icon"
 
 /**
  * The MapLibre map inside Compose. MapLibre is an older "View" (not Compose),
@@ -62,11 +73,15 @@ fun BusMap(
     shapes: List<RouteShape>,
     shapeColorHex: String,
     selectedStop: Stop?,
+    buses: List<BusMarker>,
+    selectedBus: BusMarker?,
+    busColor: Int,
     userLatLng: LatLng?,
     cameraCommands: Flow<CameraCommand>,
     contentPaddingTop: Dp,
     contentPaddingBottom: Dp,
     onStopClick: (String) -> Unit,
+    onBusClick: (String) -> Unit,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,6 +89,8 @@ fun BusMap(
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
     val currentOnStopClick by rememberUpdatedState(onStopClick)
+    val currentOnBusClick by rememberUpdatedState(onBusClick)
+    val context = LocalContext.current
     val currentOnMapClick by rememberUpdatedState(onMapClick)
     val density = LocalDensity.current
     val topPx = with(density) { contentPaddingTop.roundToPx() }
@@ -91,12 +108,17 @@ fun BusMap(
                 style = loaded
             }
             m.addOnMapClickListener { latLng ->
-                // Did the tap hit a stop circle? Look in a small square around the finger.
+                // Did the tap hit a bus or a stop? Look in a small square around the finger.
                 val p = m.projection.toScreenLocation(latLng)
                 val r = with(density) { Dp(14f).toPx() }
-                val hit = m.queryRenderedFeatures(RectF(p.x - r, p.y - r, p.x + r, p.y + r), LAYER_STOPS)
-                    .firstOrNull()?.getStringProperty("code")
-                if (hit != null) currentOnStopClick(hit) else currentOnMapClick()
+                val box = RectF(p.x - r, p.y - r, p.x + r, p.y + r)
+                val bus = m.queryRenderedFeatures(box, LAYER_BUSES).firstOrNull()?.getStringProperty("id")
+                val stop = m.queryRenderedFeatures(box, LAYER_STOPS).firstOrNull()?.getStringProperty("code")
+                when {
+                    bus != null -> currentOnBusClick(bus)
+                    stop != null -> currentOnStopClick(stop)
+                    else -> currentOnMapClick()
+                }
                 true
             }
             map = m
@@ -129,6 +151,26 @@ fun BusMap(
         style?.getSourceAs<GeoJsonSource>(SRC_SELECTED)?.setGeoJson(
             FeatureCollection.fromFeatures(listOfNotNull(selectedStop?.let {
                 Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude))
+            }))
+        )
+    }
+    // The bus icon is redrawn in the colour of the chosen line.
+    LaunchedEffect(style, busColor) {
+        style?.addImage(BUS_ICON, busIconBitmap(context, busColor))
+    }
+    LaunchedEffect(style, buses) {
+        style?.getSourceAs<GeoJsonSource>(SRC_BUSES)?.setGeoJson(
+            FeatureCollection.fromFeatures(buses.map { bus ->
+                Feature.fromGeometry(Point.fromLngLat(bus.position.longitude, bus.position.latitude)).apply {
+                    addStringProperty("id", bus.id)
+                }
+            })
+        )
+    }
+    LaunchedEffect(style, selectedBus) {
+        style?.getSourceAs<GeoJsonSource>(SRC_SELECTED_BUS)?.setGeoJson(
+            FeatureCollection.fromFeatures(listOfNotNull(selectedBus?.let {
+                Feature.fromGeometry(Point.fromLngLat(it.position.longitude, it.position.latitude))
             }))
         )
     }
@@ -168,6 +210,8 @@ private fun addLayers(style: Style) {
     style.addSource(GeoJsonSource(SRC_STOPS))
     style.addSource(GeoJsonSource(SRC_SELECTED))
     style.addSource(GeoJsonSource(SRC_USER))
+    style.addSource(GeoJsonSource(SRC_SELECTED_BUS))
+    style.addSource(GeoJsonSource(SRC_BUSES))
 
     // Route lines: thick and rounded, in the line's colour.
     style.addLayer(
@@ -205,6 +249,21 @@ private fun addLayers(style: Style) {
             PropertyFactory.circleColor("#FF7A1A"),
             PropertyFactory.circleStrokeColor("#FFFFFF"),
             PropertyFactory.circleStrokeWidth(4f),
+        )
+    )
+    // Estimated buses: an orange glow behind the tapped one, then the bus icons on top.
+    style.addLayer(
+        CircleLayer("selected-bus-layer", SRC_SELECTED_BUS).withProperties(
+            PropertyFactory.circleRadius(26f),
+            PropertyFactory.circleColor("#FF7A1A"),
+            PropertyFactory.circleOpacity(0.35f),
+        )
+    )
+    style.addLayer(
+        SymbolLayer(LAYER_BUSES, SRC_BUSES).withProperties(
+            PropertyFactory.iconImage(BUS_ICON),
+            PropertyFactory.iconAllowOverlap(true),
+            PropertyFactory.iconIgnorePlacement(true),
         )
     )
     // "You are here": a soft blue halo and a blue dot.
@@ -257,4 +316,24 @@ private fun rememberMapViewWithLifecycle(): MapView {
         }
     }
     return mapView
+}
+
+/** Draws the bus marker: a circle in the line's colour, white ring, white bus inside. */
+private fun busIconBitmap(context: Context, color: Int): Bitmap {
+    val size = (40 * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val radius = size / 2f
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawCircle(radius, radius, radius, paint)
+    paint.color = color
+    canvas.drawCircle(radius, radius, radius * 0.84f, paint)
+    ContextCompat.getDrawable(context, R.drawable.ic_bus)?.mutate()?.let { bus ->
+        bus.setTint(android.graphics.Color.WHITE)
+        val inset = (size * 0.24f).toInt()
+        bus.setBounds(inset, inset, size - inset, size - inset)
+        bus.draw(canvas)
+    }
+    return bitmap
 }

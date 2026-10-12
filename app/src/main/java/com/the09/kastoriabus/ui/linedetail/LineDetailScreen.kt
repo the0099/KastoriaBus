@@ -110,6 +110,7 @@ fun LineDetailScreen(
                         line = lineState.data,
                         stops = stops.data,
                         favoriteStopCodes = state.favoriteStopCodes,
+                        busesByNextStop = state.busesByNextStop,
                         onStopClick = onStopClick,
                         onToggleStopFavorite = viewModel::onToggleStopFavorite
                     )
@@ -151,6 +152,7 @@ private fun RouteTimeline(
     line: Line,
     stops: List<Stop>,
     favoriteStopCodes: Set<String>,
+    busesByNextStop: Map<Int, Int>,
     onStopClick: (String) -> Unit,
     onToggleStopFavorite: (String) -> Unit,
 ) {
@@ -158,6 +160,31 @@ private fun RouteTimeline(
     LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
         item(key = "count") {
             SectionTitle(pluralStringResource(R.plurals.route_stop_count, stops.size, stops.size))
+        }
+        if (busesByNextStop.isNotEmpty()) {
+            item(key = "estimate") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_bus),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        stringResource(R.string.estimate_line_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
         }
         // The same stop code can appear twice in a circular route, so the key includes the position.
         itemsIndexed(stops, key = { index, stop -> "$index-${stop.code}" }) { index, stop ->
@@ -207,11 +234,40 @@ private fun RouteTimeline(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                busesByNextStop[index]?.let { seconds -> BusComingPill(seconds, color) }
                 FavoriteButton(
                     isFavorite = stop.code in favoriteStopCodes,
                     onClick = { onToggleStopFavorite(stop.code) }
                 )
             }
         }
+    }
+}
+
+/** "🚌 ~2′": an (estimated) bus is on its way to this stop. */
+@Composable
+private fun BusComingPill(seconds: Int, color: Color) {
+    val minutes = seconds / 60
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(color)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_bus),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = if (minutes < 1) stringResource(R.string.estimate_arriving)
+                   else stringResource(R.string.estimate_in_minutes, minutes),
+            color = Color.White,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 4.dp)
+        )
     }
 }

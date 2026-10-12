@@ -29,7 +29,7 @@ Key points:
 2. Done: data layer (token fetching, Retrofit API interface, data classes, repository)
 3. Done: bottom tabs Stops + Lines (OASTH style). Stops: nearest first with location, A-Z without (or when >30 km from Kastoria), search, favorites bar + hearts. Lines: sorted by number, favorites bar + hearts, line screen with route chips and its stops. Stop screen: today's upcoming departures from the timetable
 4. Done: new look (brand colours blue/orange/teal, own colour per line because the API gives all lines #787878, gradient headers, cards, metro-style line timeline) and Map tab (MapLibre OpenGL build + free OpenFreeMap tiles: all stops, line filter with route shapes, tap a stop for a card, my-location button). Note: use the `android-sdk-opengl` MapLibre artifact; the default Vulkan one crashed on the emulator
-5. Stop screen with live arrivals and timetable by day; live bus positions on the map
+5. In progress: estimated bus positions from the timetable (data/estimate: RoutePlan). Per route, timetables of ~6 checkpoint stops are downloaded once a day; trip k = the k-th time at each checkpoint (verified: route 001 has the same trip count at every stop; the last stop has no times, so its arrival is extrapolated). Shown on the map (pick a line) and on the line screen, always labelled as an estimate. Still to do: real GPS from /stops/live when available, timetable by day on the stop screen
 6. Extras: favorites, offline timetables, dark mode, maybe a widget or notifications
 7. Publish: icon, privacy policy, closed testing, Google Play
 
