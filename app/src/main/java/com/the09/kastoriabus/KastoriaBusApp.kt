@@ -2,13 +2,19 @@ package com.the09.kastoriabus
 
 import android.app.Application
 import com.the09.kastoriabus.data.BusRepository
+import com.the09.kastoriabus.data.DiskCache
 import com.the09.kastoriabus.data.FavoritesStore
 import com.the09.kastoriabus.data.LocationHelper
+import com.the09.kastoriabus.data.OfflineDownloader
+import com.the09.kastoriabus.data.OfflineMapDownloader
 import com.the09.kastoriabus.data.remote.AuthInterceptor
 import com.the09.kastoriabus.data.remote.CITYBUS_BASE_URL
 import com.the09.kastoriabus.data.remote.CitybusApi
 import com.the09.kastoriabus.data.remote.TokenAuthenticator
 import com.the09.kastoriabus.data.remote.TokenProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 import org.maplibre.android.MapLibre
 import retrofit2.Retrofit
@@ -28,6 +34,11 @@ class KastoriaBusApp : Application() {
         private set
     lateinit var location: LocationHelper
         private set
+    lateinit var offline: OfflineDownloader
+        private set
+
+    /** Work that should continue while you switch screens (like the offline download). */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
         super.onCreate()
@@ -57,8 +68,10 @@ class KastoriaBusApp : Application() {
 
         // R.string.api_language is "el" in values/ and "en" in values-en/,
         // so the API language always matches the language of the app's texts.
-        repository = BusRepository(api) { getString(R.string.api_language) }
+        // Everything downloaded is also saved on the phone, for use without internet.
+        repository = BusRepository(api, DiskCache(filesDir)) { getString(R.string.api_language) }
         favorites = FavoritesStore(this)
         location = LocationHelper(this)
+        offline = OfflineDownloader(this, repository, OfflineMapDownloader(this), appScope)
     }
 }

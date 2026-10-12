@@ -86,4 +86,18 @@
     <string name="direction_return">Return</string>
     <string name="direction_title">%1$s · %2$s</string>
     <string name="direction_from_to">From %1$s to %2$s</string>
+
+    <!-- Step 6: offline -->
+    <string name="offline_title">Use without internet</string>
+    <string name="offline_explanation">Download the timetables of every stop for every day of the week and the map of Kastoria, so the app works with no connection. About 15–20 MB, takes a few minutes. Wi-Fi recommended.</string>
+    <string name="offline_download">Download now</string>
+    <string name="offline_update">Update</string>
+    <string name="offline_cancel">Cancel</string>
+    <string name="offline_progress_data">Timetables: %1$d / %2$d</string>
+    <string name="offline_progress_map">Map: %1$d%%</string>
+    <string name="offline_failed">The download failed. Check your connection and try again.</string>
+    <string name="offline_last">Ready to use without internet ✓\nLast download: %1$s</string>
+    <string name="offline_never">Nothing downloaded yet. What you view is saved automatically.</string>
+    <string name="offline_size">Saved on this phone: %1$.1f MB (map not included)</string>
+    <string name="offline_banner">No internet · showing saved data</string>
 </resources>

@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,7 +69,7 @@ val LOCATION_PERMISSIONS = arrayOf(
 )
 
 @Composable
-fun StopsScreen(viewModel: StopsViewModel, onStopClick: (String) -> Unit) {
+fun StopsScreen(viewModel: StopsViewModel, onStopClick: (String) -> Unit, onOfflineClick: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Shows Android's "Allow location?" dialog and gives us the answer.
@@ -93,7 +94,16 @@ fun StopsScreen(viewModel: StopsViewModel, onStopClick: (String) -> Unit) {
         topBar = {
             GradientHeader(
                 title = stringResource(R.string.tab_stops),
-                subtitle = stringResource(R.string.app_subtitle)
+                subtitle = stringResource(R.string.app_subtitle),
+                actions = {
+                    IconButton(onClick = onOfflineClick) {
+                        Icon(
+                            painterResource(R.drawable.ic_cloud_download),
+                            contentDescription = stringResource(R.string.offline_title),
+                            tint = Color.White
+                        )
+                    }
+                }
             ) {
                 SearchField(query = state.query, onQueryChange = viewModel::onQueryChange)
             }

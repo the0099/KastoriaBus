@@ -88,4 +88,18 @@
     <string name="direction_return">Επιστροφή</string>
     <string name="direction_title">%1$s · %2$s</string>
     <string name="direction_from_to">Από %1$s προς %2$s</string>
+
+    <!-- Step 6: offline -->
+    <string name="offline_title">Χρήση χωρίς internet</string>
+    <string name="offline_explanation">Κατέβασε τα δρομολόγια όλων των στάσεων για κάθε μέρα της εβδομάδας και τον χάρτη της Καστοριάς, για να λειτουργεί η εφαρμογή χωρίς σύνδεση. Περίπου 15–20 MB, χρειάζεται λίγα λεπτά. Καλύτερα με Wi-Fi.</string>
+    <string name="offline_download">Λήψη τώρα</string>
+    <string name="offline_update">Ενημέρωση</string>
+    <string name="offline_cancel">Ακύρωση</string>
+    <string name="offline_progress_data">Δρομολόγια: %1$d / %2$d</string>
+    <string name="offline_progress_map">Χάρτης: %1$d%%</string>
+    <string name="offline_failed">Η λήψη απέτυχε. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.</string>
+    <string name="offline_last">Έτοιμο για χρήση χωρίς internet ✓\nΤελευταία λήψη: %1$s</string>
+    <string name="offline_never">Δεν έχει γίνει ακόμα λήψη. Τα δεδομένα που βλέπεις αποθηκεύονται αυτόματα.</string>
+    <string name="offline_size">Αποθηκευμένα στο κινητό: %1$.1f MB (χωρίς τον χάρτη)</string>
+    <string name="offline_banner">Χωρίς internet · εμφανίζονται αποθηκευμένα δεδομένα</string>
 </resources>

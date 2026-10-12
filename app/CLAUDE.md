@@ -30,8 +30,9 @@ Key points:
 3. Done: bottom tabs Stops + Lines (OASTH style). Stops: nearest first with location, A-Z without (or when >30 km from Kastoria), search, favorites bar + hearts. Lines: sorted by number, favorites bar + hearts, line screen with route chips and its stops. Stop screen: today's upcoming departures from the timetable
 4. Done: new look (brand colours blue/orange/teal, own colour per line because the API gives all lines #787878, gradient headers, cards, metro-style line timeline) and Map tab (MapLibre OpenGL build + free OpenFreeMap tiles: all stops, line filter with route shapes, tap a stop for a card, my-location button). Note: use the `android-sdk-opengl` MapLibre artifact; the default Vulkan one crashed on the emulator
 5. In progress: estimated bus positions from the timetable (data/estimate: RoutePlan). Per route, timetables of ~6 checkpoint stops are downloaded once a day; trip k = the k-th time at each checkpoint (verified: route 001 has the same trip count at every stop; the last stop has no times, so its arrival is extrapolated). Shown on the map (pick a line) and on the line screen, always labelled as an estimate. Still to do: real GPS from /stops/live when available, timetable by day on the stop screen
-6. Extras: favorites, offline timetables, dark mode, maybe a widget or notifications
-7. Publish: icon, privacy policy, closed testing, Google Play
+6. Offline (code done, end-to-end test pending): BusRepository saves every answer on the phone (DiskCache, JSON files): memory -> saved copy < 7 days -> internet -> old saved copy. "Χρήση χωρίς internet" sheet (cloud button on Stops/Lines) downloads all stops x 7 days timetables (~1,460 requests, max 3 at a time, only when the user taps) + MapLibre offline region of Kastoria. Note 2026-10-12: /stops returned 200 with an EMPTY body for a while (website broken too)
+7. Extras: dark mode check, maybe a widget or notifications
+8. Publish: icon, privacy policy, closed testing, Google Play
 
 ## Open questions
 - No real example of a non-empty /stops/live response yet (field names are known from the site's JavaScript, see the notes file)

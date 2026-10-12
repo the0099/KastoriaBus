@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import androidx.core.content.ContextCompat
 import com.the09.kastoriabus.R
+import com.the09.kastoriabus.data.OfflineMapDownloader
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +47,8 @@ import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
 // Free OpenStreetMap-based map style from OpenFreeMap: no account or API key needed.
-private const val STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+// The same address as the saved offline map, so the map works without internet.
+private const val STYLE_URL = OfflineMapDownloader.STYLE_URL
 private val KASTORIA_CENTER = LatLng(40.5193, 21.2687)
 
 private const val SRC_SHAPES = "shapes"

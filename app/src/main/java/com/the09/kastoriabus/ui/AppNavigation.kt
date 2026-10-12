@@ -13,7 +13,15 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.the09.kastoriabus.ui.offline.OfflineBanner
+import com.the09.kastoriabus.ui.offline.OfflineSheet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -65,13 +73,21 @@ fun KastoriaBusAppUi() {
     val navController = rememberNavController()
     val app = LocalContext.current.applicationContext as KastoriaBusApp
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val onTopLevel = currentRoute in TOP_LEVEL
+    val usingSavedData by app.repository.usingSavedData.collectAsStateWithLifecycle()
+    var showOfflineSheet by rememberSaveable { mutableStateOf(false) }
+    if (showOfflineSheet) OfflineSheet(app.offline, onDismiss = { showOfflineSheet = false })
 
     Scaffold(
         // Each screen draws its own header, so this outer Scaffold leaves the insets to them.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            // The tabs are shown only on the three main screens, like the OASTH app.
-            if (currentRoute in TOP_LEVEL) BottomTabs(navController, currentRoute)
+            Column {
+                // "No internet, showing saved data"
+                if (usingSavedData) OfflineBanner(addNavigationBarPadding = !onTopLevel)
+                // The tabs are shown only on the three main screens, like the OASTH app.
+                if (onTopLevel) BottomTabs(navController, currentRoute)
+            }
         }
     ) { padding ->
         NavHost(
@@ -81,7 +97,11 @@ fun KastoriaBusAppUi() {
         ) {
             composable(Routes.STOPS) {
                 val vm = viewModel { StopsViewModel(app.repository, app.favorites, app.location) }
-                StopsScreen(vm, onStopClick = { navController.navigate(Routes.stop(it)) })
+                StopsScreen(
+                    vm,
+                    onStopClick = { navController.navigate(Routes.stop(it)) },
+                    onOfflineClick = { showOfflineSheet = true }
+                )
             }
             composable(
                 Routes.MAP,
@@ -101,7 +121,11 @@ fun KastoriaBusAppUi() {
             }
             composable(Routes.LINES) {
                 val vm = viewModel { LinesViewModel(app.repository, app.favorites) }
-                LinesScreen(vm, onLineClick = { navController.navigate(Routes.line(it)) })
+                LinesScreen(
+                    vm,
+                    onLineClick = { navController.navigate(Routes.line(it)) },
+                    onOfflineClick = { showOfflineSheet = true }
+                )
             }
             composable(Routes.LINE) { entry ->
                 val lineCode = entry.arguments?.getString("lineCode").orEmpty()

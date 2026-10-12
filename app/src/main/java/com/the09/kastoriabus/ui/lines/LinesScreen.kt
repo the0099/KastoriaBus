@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +39,7 @@ import com.the09.kastoriabus.ui.common.lineColor
 import com.the09.kastoriabus.ui.common.lineNumber
 
 @Composable
-fun LinesScreen(viewModel: LinesViewModel, onLineClick: (String) -> Unit) {
+fun LinesScreen(viewModel: LinesViewModel, onLineClick: (String) -> Unit, onOfflineClick: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -45,7 +48,16 @@ fun LinesScreen(viewModel: LinesViewModel, onLineClick: (String) -> Unit) {
                 title = stringResource(R.string.tab_lines),
                 subtitle = if (state.rows.isNotEmpty()) {
                     pluralStringResource(R.plurals.line_count, state.rows.size, state.rows.size)
-                } else null
+                } else null,
+                actions = {
+                    IconButton(onClick = onOfflineClick) {
+                        Icon(
+                            painterResource(R.drawable.ic_cloud_download),
+                            contentDescription = stringResource(R.string.offline_title),
+                            tint = Color.White
+                        )
+                    }
+                }
             )
         }
     ) { padding ->
