@@ -10,7 +10,8 @@ I'm learning Android development. Work in small steps, explain what you do and w
 - Kotlin + Jetpack Compose, Empty Activity template, minimum SDK 26, Kotlin DSL for Gradle
 - Networking: Retrofit + Gson (may already be added to app/build.gradle.kts, check first)
 - INTERNET permission in AndroidManifest.xml (may already be added, check first)
-- Planned: Room for offline caching, MapLibre (OpenStreetMap) or Google Maps for the map
+- Map: MapLibre (org.maplibre.gl:android-sdk-opengl) with OpenFreeMap tiles, no API key
+- Planned: Room for offline caching
 - All user-facing text in strings.xml, in Greek (default) and English
 
 ## Data source
@@ -27,7 +28,7 @@ Key points:
 1. Done: project created, app runs on my phone, API mapped
 2. Done: data layer (token fetching, Retrofit API interface, data classes, repository)
 3. Done: bottom tabs Stops + Lines (OASTH style). Stops: nearest first with location, A-Z without (or when >30 km from Kastoria), search, favorites bar + hearts. Lines: sorted by number, favorites bar + hearts, line screen with route chips and its stops. Stop screen: today's upcoming departures from the timetable
-4. Map with stops, route shapes and "stops near me"
+4. Done: new look (brand colours blue/orange/teal, own colour per line because the API gives all lines #787878, gradient headers, cards, metro-style line timeline) and Map tab (MapLibre OpenGL build + free OpenFreeMap tiles: all stops, line filter with route shapes, tap a stop for a card, my-location button). Note: use the `android-sdk-opengl` MapLibre artifact; the default Vulkan one crashed on the emulator
 5. Stop screen with live arrivals and timetable by day; live bus positions on the map
 6. Extras: favorites, offline timetables, dark mode, maybe a widget or notifications
 7. Publish: icon, privacy policy, closed testing, Google Play

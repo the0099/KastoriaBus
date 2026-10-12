@@ -46,4 +46,25 @@
     <string name="back">Πίσω</string>
     <string name="error_loading">Δεν ήταν δυνατή η φόρτωση των δεδομένων. Έλεγξε τη σύνδεσή σου στο internet.</string>
     <string name="retry">Ξανά</string>
+
+    <!-- Step 4: new look and map -->
+    <string name="app_subtitle">Αστικό ΚΤΕΛ Καστοριάς</string>
+    <string name="tab_map">Χάρτης</string>
+    <string name="show_on_map">Εμφάνιση στον χάρτη</string>
+    <string name="map_all_stops">%1$d στάσεις</string>
+    <string name="map_all_lines">Όλες</string>
+    <string name="map_my_location">Η τοποθεσία μου</string>
+    <string name="map_show_departures">Επόμενα δρομολόγια</string>
+    <string name="close">Κλείσιμο</string>
+    <string name="next_bus">ΕΠΟΜΕΝΟ ΛΕΩΦΟΡΕΙΟ</string>
+    <string name="minutes_short">λεπτά</string>
+    <string name="stop_number">Στάση %1$d</string>
+    <plurals name="line_count">
+        <item quantity="one">%1$d γραμμή</item>
+        <item quantity="other">%1$d γραμμές</item>
+    </plurals>
+    <plurals name="route_count">
+        <item quantity="one">%1$d διαδρομή</item>
+        <item quantity="other">%1$d διαδρομές</item>
+    </plurals>
 </resources>

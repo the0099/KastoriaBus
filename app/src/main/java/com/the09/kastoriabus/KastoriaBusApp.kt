@@ -10,6 +10,7 @@ import com.the09.kastoriabus.data.remote.CitybusApi
 import com.the09.kastoriabus.data.remote.TokenAuthenticator
 import com.the09.kastoriabus.data.remote.TokenProvider
 import okhttp3.OkHttpClient
+import org.maplibre.android.MapLibre
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -30,6 +31,8 @@ class KastoriaBusApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // The map library must be set up once before any map is shown.
+        MapLibre.getInstance(this)
 
         // Plain client: used only to download the stops page that holds the token.
         val baseClient = OkHttpClient.Builder()

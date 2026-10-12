@@ -25,6 +25,7 @@ data class Departure(val trip: Trip, val minutesUntil: Long)
 
 data class StopDetailUiState(
     val stopName: String = "",
+    val lineCodes: List<String> = emptyList(), // lines that stop here, sorted by number
     val isLoading: Boolean = true,
     val hasError: Boolean = false,
     val departures: List<Departure> = emptyList(),
@@ -37,7 +38,7 @@ class StopDetailViewModel(
     private val favorites: FavoritesStore,
 ) : ViewModel() {
 
-    private val data = MutableStateFlow<LoadState<Pair<String, List<Trip>>>>(LoadState.Loading)
+    private val data = MutableStateFlow<LoadState<Triple<String, List<String>, List<Trip>>>>(LoadState.Loading)
 
     // Ticks every 30 seconds so "in 5 min" counts down and departed buses disappear.
     private val clock = flow {
@@ -53,9 +54,10 @@ class StopDetailViewModel(
             LoadState.Loading -> StopDetailUiState(isLoading = true, isFavorite = isFavorite)
             LoadState.Error -> StopDetailUiState(isLoading = false, hasError = true, isFavorite = isFavorite)
             is LoadState.Ready -> {
-                val (name, trips) = data.data
+                val (name, lineCodes, trips) = data.data
                 StopDetailUiState(
                     stopName = name,
+                    lineCodes = lineCodes,
                     isLoading = false,
                     departures = trips
                         .map { Departure(it, Duration.between(now, LocalTime.of(it.tripTimeHour, it.tripTimeMinute)).toMinutes()) }
@@ -76,10 +78,10 @@ class StopDetailViewModel(
             data.value = LoadState.Loading
             data.value = loadCatching {
                 val trips = repository.getTimetable(stopCode) // today's timetable
-                val name = repository.getStops().firstOrNull { it.code == stopCode }?.name
-                    ?: trips.firstOrNull()?.stopName
-                    ?: stopCode
-                name to trips
+                val stop = repository.getStops().firstOrNull { it.code == stopCode }
+                val name = stop?.name ?: trips.firstOrNull()?.stopName ?: stopCode
+                val lineCodes = stop?.lineCodes.orEmpty().sortedBy { it.toIntOrNull() ?: Int.MAX_VALUE }
+                Triple(name, lineCodes, trips)
             }
         }
     }
