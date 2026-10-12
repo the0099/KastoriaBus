@@ -1,0 +1,452 @@
+KASTORIA CITYBUS - DATA API NOTES
+=================================
+Mapped on 2026-10-12 (Monday) from https://kastoria.citybus.gr/el/stops
+(watched in Claude's built-in browser, plus reading the site's own /js/stops.js)
+
+-------------------------------------------------------------------------------
+0. GENERAL
+-------------------------------------------------------------------------------
+Base URL ..........: https://rest.citybus.gr
+Agency code .......: 115   (= Kastoria; other cities on citybus.gr use other codes)
+Language segment ..: el | en   (most endpoints have it, /lines/{lineCode}/points does NOT)
+All calls .........: GET, JSON (application/json; charset=utf-8)
+
+Headers the site sends on every API call:
+  Authorization: Bearer REDACTED
+  Accept: application/json, text/javascript, */*; q=0.01
+  Content-Type: application/json; charset=utf-8
+
+Without the Authorization header the API answers 401 (empty body).
+
+Site pages: the website itself only has ONE real page: /el/stops (and /en/stops).
+/, /el, /el/lines, /el/map, /el/routes, /el/live, /el/vehicles, robots.txt and
+sitemap.xml all return 404. "Lines", "routes" and "map" are all part of the
+stops page (map + filters), so every endpoint below comes from that one page.
+
+Page config (inline <script> in the HTML of /el/stops):
+  const agencyCode = 115;
+  const apiUrl = 'https://rest.citybus.gr';
+  const token = 'REDACTED';
+  const language = 'el';
+  const maxLiveDepartureMinutes = 30;      // live tab shows buses due in next 30 min
+  const latSW = 40.440979;  const lngSW = 21.041117;   // map bounds (south-west)
+  const latNE = 40.580043;  const lngNE = 21.363929;   // map bounds (north-east)
+  repeatInterval = 20  (in stops.js)       // live data refreshes every 20 s
+
+Identifier note: URLs use the stop CODE (e.g. "16044"), the route CODE
+(e.g. "001") and the line CODE (e.g. "01") - all strings. The numeric "id"
+fields are internal database ids and are not used in any URL.
+
+-------------------------------------------------------------------------------
+1. WHERE THE BEARER TOKEN COMES FROM
+-------------------------------------------------------------------------------
+Request ...: GET https://kastoria.citybus.gr/el/stops   (or /en/stops) - the HTML page itself
+There is NO separate login/token API call. The server writes the token directly
+into the HTML as a JavaScript constant:   const token = '<JWT>';
+stops.js then sends it as "Authorization: Bearer <token>" on every API call.
+
+Token format: JWT, header {"alg":"HS256","typ":"JWT"}, payload contains ONLY
+"exp" (no user, no iat, no scope).
+
+Lifetime: ~48 hours.
+  - Page loaded 2026-10-12 09:00:47Z  -> exp 2026-10-14 09:00:47Z  (exactly +48 h)
+  - Another load at ~08:53Z had exp 08:43Z+48h, so the HTML seems to be cached
+    for a few minutes; the token can be up to ~10-15 min "older" than the page load.
+
+For the app: download /el/stops HTML, regex  const token = '([^']+)'  , decode the
+JWT payload to read "exp", and refresh (re-download the page) before it expires
+or whenever an API call returns 401.
+
+-------------------------------------------------------------------------------
+2. ALL STOPS  (names, codes, coordinates)
+-------------------------------------------------------------------------------
+GET https://rest.citybus.gr/api/v1/{lang}/{agencyCode}/stops
+    e.g. https://rest.citybus.gr/api/v1/el/115/stops
+Headers: Authorization: Bearer REDACTED
+Returns: an array with every stop of the agency (209 stops for Kastoria), with
+coordinates and which lines/routes serve it. ~45 KB. Called once on page load.
+
+Sample (first 40 lines):
+[
+  {
+    "id": 12800805,
+    "code": "16157",
+    "name": "1 ΓΥΜΝΑΣΙΟ",
+    "latitude": 40.5370910882631,
+    "longitude": 21.264336028967946,
+    "lineCodes": [
+      "01",
+      "02",
+      "08",
+      "09",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "54"
+    ],
+    "routeCodes": [
+      "008",
+      "013",
+      "015",
+      "020",
+      "025",
+      "028",
+      "029",
+      "042",
+      "045",
+      "054",
+      "057",
+      "058"
+    ],
+    "distance": 0
+  },
+  {
+    "id": 12800968,
+    "code": "16176",
+    "name": "3 ΓΥΜΝΑΣΙΟ",
+    "latitude": 40.519542030561915,
+
+Another example (the stop you already knew):
+  {"id":12800836,"code":"16044","name":"ΝΤΙΝΗ","latitude":40.503968365340114,
+   "longitude":21.24531499280801,"lineCodes":["01","03","05","06","10","11","16","17"],
+   "routeCodes":["001","003",...,"057"],"distance":0}
+
+Fields:
+  id          internal numeric id (not used in URLs)
+  code        stop code - THIS is the {stopCode} used by /stops/live and /trips/stop
+  name        stop name (in the requested language)
+  latitude    WGS84 latitude  (number)
+  longitude   WGS84 longitude (number)
+  lineCodes   codes of the lines that stop here (match "code" in /lines)
+  routeCodes  codes of the routes that stop here (match routes[].code in /lines)
+  distance    always 0 here - probably distance from a user position in a
+              "nearby stops" variant of the call (not seen on the site)
+
+-------------------------------------------------------------------------------
+3. LINES AND THEIR ROUTES
+-------------------------------------------------------------------------------
+GET https://rest.citybus.gr/api/v1/{lang}/{agencyCode}/lines
+    e.g. https://rest.citybus.gr/api/v1/el/115/lines
+Headers: Authorization: Bearer REDACTED
+Returns: an array of all lines, each with its colours and the list of routes
+(variants/directions) that belong to it. ~6 KB. Called once on page load.
+Line codes seen: 01-11, 13-17, 53, 54.
+
+Sample (first 40 lines):
+[
+  {
+    "id": 544099,
+    "code": "01",
+    "name": "ΜΕΣΟΠΟΤΑΜΙΑ",
+    "color": "#787878",
+    "textColor": "#ffffff",
+    "borderColor": "#646464",
+    "routes": [
+      {
+        "id": 1790828,
+        "code": "001",
+        "name": "ΜΕΣΣΟΠΟΤΑΜΙΑ",
+        "direction": 2
+      },
+      {
+        "id": 1790839,
+        "code": "012",
+        "name": "MANIAKOI-ΜΕΣΣΟΠΟΤΑΜΙΑ",
+        "direction": 2
+      },
+      {
+        "id": 1790844,
+        "code": "018",
+        "name": "ΠΑΝΕΠΙΣΤΗΜΙΟ - ΜΕΣΣΟΠΟΤΑΜΙΑ",
+        "direction": 2
+      },
+      {
+        "id": 1790851,
+        "code": "031",
+        "name": "ΜΕΣΣΟΠΟΤΑΜΙΑ - ΜΑΝΙΑΚΟΙ - ΚΑΣΤΟΡΙΑ",
+        "direction": 2
+      },
+      {
+        "id": 1790853,
+        "code": "033",
+        "name": "ΜΕΣΣΟΠΟΤΑΜΙΑ - ΠΑΝΕΠΙΣΤΗΜΙΟ - ΚΑΣΤΟΡΙΑ",
+        "direction": 2
+      },
+      {
+
+Fields:
+  id            internal line id
+  code          line code ("01") - used as {lineCode}
+  name          line name
+  color         background colour for the line badge (hex)
+  textColor     text colour on the badge
+  borderColor   border colour (used for the live list / map)
+  routes[]      route variants of this line:
+     id         internal route id
+     code       route code ("001") - used as {routeCode}
+     name       route description
+     direction  1 or 2 - direction of travel (exact meaning not documented;
+                most "main" routes are 2, many school/special variants are 1)
+
+-------------------------------------------------------------------------------
+4. STOPS OF A ROUTE (ordered)
+-------------------------------------------------------------------------------
+GET https://rest.citybus.gr/api/v1/{lang}/{agencyCode}/routes/{routeCode}/sequence
+    e.g. https://rest.citybus.gr/api/v1/el/115/routes/001/sequence
+Headers: Authorization: Bearer REDACTED
+Returns: the ordered list of stop codes that a route passes (route 001 = 53 stops).
+Triggered on the site in "Επιλογή στάσης" -> line filter -> route filter.
+
+Sample (first 40 lines):
+[
+  {
+    "sequence": 1,
+    "code": "16001"
+  },
+  {
+    "sequence": 2,
+    "code": "16002"
+  },
+  {
+    "sequence": 3,
+    "code": "16003"
+  },
+  {
+    "sequence": 4,
+    "code": "16004"
+  },
+  {
+    "sequence": 5,
+    "code": "16005"
+  },
+  {
+    "sequence": 6,
+    "code": "16006"
+  },
+  {
+    "sequence": 7,
+    "code": "16007"
+  },
+  {
+    "sequence": 8,
+    "code": "16008"
+  },
+  {
+    "sequence": 9,
+    "code": "16009"
+  },
+  {
+    "sequence": 10,
+    "code": "16010"
+
+Fields:
+  sequence   position of the stop along the route (1 = first stop / terminus)
+  code       stop code -> join with /stops to get name and coordinates
+
+-------------------------------------------------------------------------------
+5. ROUTE SHAPES (polylines) OF A LINE
+-------------------------------------------------------------------------------
+GET https://rest.citybus.gr/api/v1/{agencyCode}/lines/{lineCode}/points
+    e.g. https://rest.citybus.gr/api/v1/115/lines/01/points
+    NOTE: no {lang} segment in this one!
+Headers: Authorization: Bearer REDACTED
+Returns: for every route of the line, the list of GPS points that draw the route
+on the map (line 01 -> 8 routes). The site calls it once per line on page load
+(01..11, 13..17, 53, 54 = 18 calls).
+
+Sample (first 40 lines):
+[
+  {
+    "routeCode": "001",
+    "routePoints": [
+      {
+        "id": 747109452,
+        "sequence": 1,
+        "longitude": "21.261946",
+        "latitude": "40.521436"
+      },
+      {
+        "id": 747109453,
+        "sequence": 2,
+        "longitude": "21.261977",
+        "latitude": "40.521392"
+      },
+      {
+        "id": 747109454,
+        "sequence": 3,
+        "longitude": "21.262227",
+        "latitude": "40.521014"
+      },
+      {
+        "id": 747109455,
+        "sequence": 4,
+        "longitude": "21.26225",
+        "latitude": "40.520939"
+      },
+      {
+        "id": 747109456,
+        "sequence": 5,
+        "longitude": "21.262227",
+        "latitude": "40.520921"
+      },
+      {
+        "id": 747109457,
+        "sequence": 6,
+        "longitude": "21.262207",
+        "latitude": "40.520895"
+      },
+
+Fields:
+  routeCode               route code ("001")
+  routePoints[].id        internal point id
+  routePoints[].sequence  order of the point along the shape
+  routePoints[].latitude  latitude  - STRING (parse to double)
+  routePoints[].longitude longitude - STRING (parse to double)
+
+-------------------------------------------------------------------------------
+6. LIVE ARRIVALS FOR A STOP  (+ LIVE BUS POSITIONS)
+-------------------------------------------------------------------------------
+GET https://rest.citybus.gr/api/v1/{lang}/{agencyCode}/stops/live/{stopCode}
+    e.g. https://rest.citybus.gr/api/v1/el/115/stops/live/16044
+Headers: Authorization: Bearer REDACTED
+Returns: the buses expected at this stop in the next 30 minutes, INCLUDING each
+bus's current GPS position. Polled every 20 seconds while the "Τηλεματική" tab
+is open. There is NO separate "all vehicles" endpoint - live bus positions only
+come from this per-stop call.
+
+When no bus is expected, the API answers HTTP 404 with this body (the site then
+shows "Δεν αναμένονται δρομολόγια για τα επόμενα 30 λεπτά"):
+  {"type":"https://tools.ietf.org/html/rfc7231#section-6.5.4","title":"Not Found",
+   "status":404,"traceId":"00-...-...-00"}
+=> In the app treat 404 here as "empty list", not as an error.
+
+Response sample: NOT CAPTURED. During the whole session (Mon ~11:55-12:05 local)
+every live call returned 404 - even at ΑΦΕΤΗΡΙΑ (16001) where the timetable had a
+line 06 departure at 12:30. So probably no GPS-tracked bus was active, or buses
+only appear once they are assigned/moving.
+
+Response structure, as read from the site's stops.js (field names are certain,
+exact types/units are my reading of the code):
+  {
+    "vehicles": [
+      {
+        "vehicleCode":      bus id (used to highlight the bus on map/list)
+        "lineCode":         line code, e.g. "06"
+        "routeCode":        route code, e.g. "006"
+        "routeName":        route name
+        "lineColor":        hex colour of the line badge
+        "departureMins":    minutes until the bus reaches this stop
+        "departureSeconds": seconds until arrival (used for the "blinking" when close)
+        "latitude":         current bus latitude
+        "longitude":        current bus longitude
+        ... (stops.js also uses lineTextColor/borderColor from the vehicle or line)
+      }
+    ]
+  }
+The site draws each vehicle marker at (latitude, longitude) and the route
+polyline of its routeCode (from /lines/{lineCode}/points).
+
+-------------------------------------------------------------------------------
+7. TIMETABLE FOR A STOP ON A DAY
+-------------------------------------------------------------------------------
+GET https://rest.citybus.gr/api/v1/{lang}/{agencyCode}/trips/stop/{stopCode}/day/{day}
+    e.g. https://rest.citybus.gr/api/v1/el/115/trips/stop/16044/day/1
+Headers: Authorization: Bearer REDACTED
+{day}: 0 = Sunday (ΚΥ), 1 = Monday (ΔΕ), 2 = Tuesday (ΤΡ), 3 = Wednesday (ΤΕ),
+       4 = Thursday (ΠΕ), 5 = Friday (ΠΑ), 6 = Saturday (ΣΑ)
+       (same numbering as JavaScript Date.getDay(); tested 1, 6 and 0)
+Returns: every scheduled pass of any line/route through this stop on that day,
+sorted by time. Called when a stop is selected (today) and on each day tab click
+in "Πρόγραμμα".
+
+Sample (first 40 lines):
+[
+  {
+    "id": 62397132,
+    "day": 1,
+    "routeCode": "031",
+    "routeName": "ΜΕΣΣΟΠΟΤΑΜΙΑ - ΜΑΝΙΑΚΟΙ - ΚΑΣΤΟΡΙΑ",
+    "lineCode": "01",
+    "lineName": "ΜΕΣΟΠΟΤΑΜΙΑ",
+    "lineColor": "#787878",
+    "lineTextColor": "#ffffff",
+    "stopCode": "16044",
+    "stopName": "ΝΤΙΝΗ",
+    "tripTime": "06:59",
+    "tripTimeHour": 6,
+    "tripTimeMinute": 59
+  },
+  {
+    "id": 62397120,
+    "day": 1,
+    "routeCode": "028",
+    "routeName": "ΑΠΟ ΠΟΡΙΑ-MANIAKOI-OMONOI-ΠΑΡΑΛΙΑ",
+    "lineCode": "17",
+    "lineName": "ΑΠΟ ΠΟΡΙΑ-ΜΑΝΙΑΚΟΙ-ΟΜΟΝΟΙΑ-ΛΥΚΕΙΑ",
+    "lineColor": "#787878",
+    "lineTextColor": "#ffffff",
+    "stopCode": "16044",
+    "stopName": "ΝΤΙΝΗ",
+    "tripTime": "07:33",
+    "tripTimeHour": 7,
+    "tripTimeMinute": 33
+  },
+  {
+    "id": 62397221,
+    "day": 1,
+    "routeCode": "056",
+    "routeName": "ΜΕΣΣΟΠΟΤΑΜΙΑ - ΛΥΚΕΙΑ",
+    "lineCode": "01",
+    "lineName": "ΜΕΣΟΠΟΤΑΜΙΑ",
+    "lineColor": "#787878",
+    "lineTextColor": "#ffffff",
+
+Fields:
+  id              internal trip-stop id
+  day             day number (same as {day})
+  routeCode/routeName   which route variant
+  lineCode/lineName     which line
+  lineColor/lineTextColor  badge colours
+  stopCode/stopName     the stop you asked for
+  tripTime        scheduled time at this stop "HH:mm" (local Greek time)
+  tripTimeHour    hour as number (the site groups the list by this)
+  tripTimeMinute  minute as number
+
+-------------------------------------------------------------------------------
+8. "GetViewportInfo"  -  NOT part of the bus API
+-------------------------------------------------------------------------------
+POST https://maps.googleapis.com/$rpc/google.internal.maps.mapsjs.v1.MapsJsInternalService/GetViewportInfo
+This is an internal call of the Google Maps JavaScript API itself (not of
+citybus.gr). Google Maps sends it whenever the visible map area changes, to get
+metadata for that viewport: map-data copyright/attribution text ("©2026 Δεδομένα
+χάρτη Google"), available zoom levels / imagery info for the area, etc.
+It contains no bus data - ignore it. Your Android app will use its own map SDK.
+
+Other non-API domains the page talks to (all ignorable):
+  maps.googleapis.com (map tiles, /maps/api/js), fonts.googleapis.com,
+  googletagmanager.com + region1.google-analytics.com (Google Analytics G-G2YWEZFP74)
+
+-------------------------------------------------------------------------------
+9. SUGGESTED APP FLOW
+-------------------------------------------------------------------------------
+ 1. GET /el/stops HTML -> extract token (cache until exp, refresh on 401).
+ 2. GET /api/v1/el/115/stops and /api/v1/el/115/lines once, cache locally
+    (they rarely change).
+ 3. Route shapes: /api/v1/115/lines/{lineCode}/points - only for the line the
+    user opens; cache.
+ 4. Stop screen: /trips/stop/{stopCode}/day/{0-6} for the timetable;
+    /stops/live/{stopCode} every 20-30 s for live (404 = no buses).
+ 5. Route screen: /routes/{routeCode}/sequence + join codes with the stops list.
+
+-------------------------------------------------------------------------------
+10. OPEN QUESTIONS
+-------------------------------------------------------------------------------
+ - Real JSON of a non-empty /stops/live response (no bus was live during mapping).
+   Load a busy stop (e.g. 16001 ΑΦΕΤΗΡΙΑ) in a peak hour (~07:00-08:30 on a
+   weekday) to capture it.
+ - Exact meaning of routes[].direction (1 vs 2).
+ - What "distance" in /stops means (always 0) - maybe a nearby-stops variant
+   with lat/lon query parameters exists but the site never uses it.
+ - Whether the token is tied to the agency (115) or works for every citybus.gr city.

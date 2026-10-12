@@ -1,0 +1,37 @@
+# Kastoria Bus App
+
+## Goal
+An Android app for the Kastoria city buses (Αστικό ΚΤΕΛ Καστοριάς), similar to the OASTH app for Thessaloniki: lines, stops, a map, timetables and live arrivals.
+
+## About me
+I'm learning Android development. Work in small steps, explain what you do and why in simple terms, and tell me how to test each step on my phone. After each working step, commit to Git with a clear message.
+
+## Tech decisions (already made)
+- Kotlin + Jetpack Compose, Empty Activity template, minimum SDK 26, Kotlin DSL for Gradle
+- Networking: Retrofit + Gson (may already be added to app/build.gradle.kts, check first)
+- INTERNET permission in AndroidManifest.xml (may already be added, check first)
+- Planned: Room for offline caching, MapLibre (OpenStreetMap) or Google Maps for the map
+- All user-facing text in strings.xml, in Greek (default) and English
+
+## Data source
+The data comes from the API behind https://kastoria.citybus.gr/el/stops. Full details are in kastoria-api-notes.txt in the project root: read it before working on anything data-related.
+Key points:
+- Base URL https://rest.citybus.gr, agency code 115, language el or en
+- Every call needs "Authorization: Bearer <token>". There's no login API: the token is inside the HTML of /el/stops as `const token = '...'`. It's a JWT that lasts about 48 hours. Get it from the page, cache it until it expires, and refresh it on a 401. Never hardcode the token.
+- Endpoints: /stops (all stops), /lines (lines + routes + colors), /routes/{routeCode}/sequence, /api/v1/115/lines/{lineCode}/points (route shapes, no language segment), /trips/stop/{stopCode}/day/{0-6} (timetable, 0 = Sunday), /stops/live/{stopCode} (live arrivals + bus positions)
+- /stops/live returns 404 when no buses are coming: treat it as an empty list, not an error
+- Be gentle with the server: cache stops, lines and shapes; refresh live data every 20–30 seconds only while a stop screen is open
+- We don't have permission from the site owner (e-analysis.eu / KTEL Kastoria) yet. I plan to ask before publishing.
+
+## Plan
+1. Done: project created, app runs on my phone, API mapped
+2. Data layer: token fetching, Retrofit API interface, data classes, repository
+3. Lines and stops screens (bottom navigation: Lines, Map, Favorites)
+4. Map with stops, route shapes and "stops near me"
+5. Stop screen with live arrivals and timetable by day; live bus positions on the map
+6. Extras: favorites, offline timetables, dark mode, maybe a widget or notifications
+7. Publish: icon, privacy policy, closed testing, Google Play
+
+## Open questions
+- No real example of a non-empty /stops/live response yet (field names are known from the site's JavaScript, see the notes file)
+- Meaning of route "direction" (1 vs 2)
