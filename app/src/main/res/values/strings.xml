@@ -3,17 +3,47 @@
     <!-- Language segment for rest.citybus.gr, matches the language of these texts -->
     <string name="api_language" translatable="false">el</string>
 
-    <!-- Temporary data check screen (step 2) -->
-    <string name="test_title">Έλεγχος δεδομένων</string>
-    <string name="test_loading">Φόρτωση…</string>
-    <string name="test_stops">Στάσεις: %1$d</string>
-    <string name="test_lines">Γραμμές: %1$d</string>
-    <string name="test_route_stops">Στάσεις διαδρομής %1$s: %2$d</string>
-    <string name="test_shapes">Διαδρομές στον χάρτη, γραμμή %1$s: %2$d</string>
-    <string name="test_timetable">Δρομολόγια σήμερα στη στάση %1$s: %2$d</string>
-    <string name="test_next">Επόμενα: %1$s</string>
-    <string name="test_next_none">Δεν υπάρχουν άλλα δρομολόγια σήμερα</string>
-    <string name="test_live">Λεωφορεία που έρχονται τώρα (30 λεπτά): %1$d</string>
-    <string name="test_error">Σφάλμα: %1$s</string>
-    <string name="test_retry">Ξανά</string>
+    <!-- Tabs -->
+    <string name="tab_stops">Στάσεις</string>
+    <string name="tab_lines">Γραμμές</string>
+
+    <!-- Favorites -->
+    <string name="favorites_title">Αγαπημένα</string>
+    <string name="favorites_empty_stops">Πάτησε την καρδιά σε μια στάση για να την προσθέσεις εδώ</string>
+    <string name="favorites_empty_lines">Πάτησε την καρδιά σε μια γραμμή για να την προσθέσεις εδώ</string>
+    <string name="favorite_add">Προσθήκη στα αγαπημένα</string>
+    <string name="favorite_remove">Αφαίρεση από τα αγαπημένα</string>
+
+    <!-- Stops tab -->
+    <string name="search_stops">Αναζήτηση στάσης</string>
+    <string name="clear_search">Καθαρισμός</string>
+    <string name="stops_nearest">Κοντινές στάσεις</string>
+    <string name="stops_all">Όλες οι στάσεις (Α–Ω)</string>
+    <string name="no_stops_found">Δεν βρέθηκαν στάσεις</string>
+    <string name="location_finding">Εύρεση τοποθεσίας…</string>
+    <string name="location_denied">Χωρίς πρόσβαση στην τοποθεσία, οι στάσεις εμφανίζονται αλφαβητικά</string>
+    <string name="location_unavailable">Η τοποθεσία σου δεν βρέθηκε, οι στάσεις εμφανίζονται αλφαβητικά</string>
+    <string name="location_far_away">Είσαι μακριά από την Καστοριά, οι στάσεις εμφανίζονται αλφαβητικά</string>
+    <string name="location_allow">Να επιτρέπεται</string>
+    <string name="distance_m">%1$d μ</string>
+    <string name="distance_km">%1$.1f χλμ</string>
+
+    <!-- Lines tab and line screen -->
+    <string name="lines_all">Όλες οι γραμμές</string>
+    <string name="line_title">%1$s · %2$s</string>
+    <plurals name="route_stop_count">
+        <item quantity="one">%1$d στάση</item>
+        <item quantity="other">%1$d στάσεις</item>
+    </plurals>
+
+    <!-- Stop screen -->
+    <string name="upcoming_title">Επόμενα δρομολόγια σήμερα (πρόγραμμα)</string>
+    <string name="upcoming_none">Δεν υπάρχουν άλλα δρομολόγια σήμερα</string>
+    <string name="departure_now">τώρα</string>
+    <string name="departure_in_minutes">σε %1$d′</string>
+
+    <!-- Common -->
+    <string name="back">Πίσω</string>
+    <string name="error_loading">Δεν ήταν δυνατή η φόρτωση των δεδομένων. Έλεγξε τη σύνδεσή σου στο internet.</string>
+    <string name="retry">Ξανά</string>
 </resources>

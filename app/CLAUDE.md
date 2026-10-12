@@ -25,8 +25,8 @@ Key points:
 
 ## Plan
 1. Done: project created, app runs on my phone, API mapped
-2. Data layer: token fetching, Retrofit API interface, data classes, repository
-3. Lines and stops screens (bottom navigation: Lines, Map, Favorites)
+2. Done: data layer (token fetching, Retrofit API interface, data classes, repository)
+3. Done: bottom tabs Stops + Lines (OASTH style). Stops: nearest first with location, A-Z without (or when >30 km from Kastoria), search, favorites bar + hearts. Lines: sorted by number, favorites bar + hearts, line screen with route chips and its stops. Stop screen: today's upcoming departures from the timetable
 4. Map with stops, route shapes and "stops near me"
 5. Stop screen with live arrivals and timetable by day; live bus positions on the map
 6. Extras: favorites, offline timetables, dark mode, maybe a widget or notifications

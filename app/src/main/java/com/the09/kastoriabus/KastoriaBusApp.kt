@@ -2,6 +2,8 @@ package com.the09.kastoriabus
 
 import android.app.Application
 import com.the09.kastoriabus.data.BusRepository
+import com.the09.kastoriabus.data.FavoritesStore
+import com.the09.kastoriabus.data.LocationHelper
 import com.the09.kastoriabus.data.remote.AuthInterceptor
 import com.the09.kastoriabus.data.remote.CITYBUS_BASE_URL
 import com.the09.kastoriabus.data.remote.CitybusApi
@@ -15,11 +17,15 @@ import java.util.concurrent.TimeUnit
 /**
  * Runs once when the app starts, before any screen. It builds the networking
  * objects a single time, so every screen shares the same repository and caches.
- * Screens get it with: (application as KastoriaBusApp).repository
+ * Screens get them with: (application as KastoriaBusApp).repository etc.
  */
 class KastoriaBusApp : Application() {
 
     lateinit var repository: BusRepository
+        private set
+    lateinit var favorites: FavoritesStore
+        private set
+    lateinit var location: LocationHelper
         private set
 
     override fun onCreate() {
@@ -49,5 +55,7 @@ class KastoriaBusApp : Application() {
         // R.string.api_language is "el" in values/ and "en" in values-en/,
         // so the API language always matches the language of the app's texts.
         repository = BusRepository(api) { getString(R.string.api_language) }
+        favorites = FavoritesStore(this)
+        location = LocationHelper(this)
     }
 }
