@@ -35,11 +35,17 @@ import com.the09.kastoriabus.ui.common.ListCard
 import com.the09.kastoriabus.ui.common.LoadingView
 import com.the09.kastoriabus.ui.common.SectionTitle
 import com.the09.kastoriabus.ui.common.favoritesBar
+import com.the09.kastoriabus.ui.offline.OfflineButton
 import com.the09.kastoriabus.ui.common.lineColor
 import com.the09.kastoriabus.ui.common.lineNumber
 
 @Composable
-fun LinesScreen(viewModel: LinesViewModel, onLineClick: (String) -> Unit, onOfflineClick: () -> Unit) {
+fun LinesScreen(
+    viewModel: LinesViewModel,
+    usingSavedData: Boolean,
+    onLineClick: (String) -> Unit,
+    onOfflineClick: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -50,13 +56,7 @@ fun LinesScreen(viewModel: LinesViewModel, onLineClick: (String) -> Unit, onOffl
                     pluralStringResource(R.plurals.line_count, state.rows.size, state.rows.size)
                 } else null,
                 actions = {
-                    IconButton(onClick = onOfflineClick) {
-                        Icon(
-                            painterResource(R.drawable.ic_cloud_download),
-                            contentDescription = stringResource(R.string.offline_title),
-                            tint = Color.White
-                        )
-                    }
+                    OfflineButton(usingSavedData, onClick = onOfflineClick)
                 }
             )
         }

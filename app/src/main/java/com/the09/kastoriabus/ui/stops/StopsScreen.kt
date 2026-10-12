@@ -60,6 +60,7 @@ import com.the09.kastoriabus.ui.common.LoadingView
 import com.the09.kastoriabus.ui.common.Pill
 import com.the09.kastoriabus.ui.common.SectionTitle
 import com.the09.kastoriabus.ui.common.favoritesBar
+import com.the09.kastoriabus.ui.offline.OfflineButton
 import com.the09.kastoriabus.ui.common.formatDistance
 import com.the09.kastoriabus.ui.theme.AccentBrush
 
@@ -69,7 +70,12 @@ val LOCATION_PERMISSIONS = arrayOf(
 )
 
 @Composable
-fun StopsScreen(viewModel: StopsViewModel, onStopClick: (String) -> Unit, onOfflineClick: () -> Unit) {
+fun StopsScreen(
+    viewModel: StopsViewModel,
+    usingSavedData: Boolean,
+    onStopClick: (String) -> Unit,
+    onOfflineClick: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Shows Android's "Allow location?" dialog and gives us the answer.
@@ -96,13 +102,7 @@ fun StopsScreen(viewModel: StopsViewModel, onStopClick: (String) -> Unit, onOffl
                 title = stringResource(R.string.tab_stops),
                 subtitle = stringResource(R.string.app_subtitle),
                 actions = {
-                    IconButton(onClick = onOfflineClick) {
-                        Icon(
-                            painterResource(R.drawable.ic_cloud_download),
-                            contentDescription = stringResource(R.string.offline_title),
-                            tint = Color.White
-                        )
-                    }
+                    OfflineButton(usingSavedData, onClick = onOfflineClick)
                 }
             ) {
                 SearchField(query = state.query, onQueryChange = viewModel::onQueryChange)

@@ -63,6 +63,7 @@ import com.the09.kastoriabus.ui.common.lineColor
 import com.the09.kastoriabus.ui.common.lineColorHex
 import com.the09.kastoriabus.ui.common.lineNumber
 import com.the09.kastoriabus.ui.common.prettyRouteName
+import com.the09.kastoriabus.ui.offline.OfflineButton
 import com.the09.kastoriabus.ui.stops.LOCATION_PERMISSIONS
 import com.the09.kastoriabus.ui.theme.LakeBlue
 import org.maplibre.android.geometry.LatLng
@@ -70,8 +71,10 @@ import org.maplibre.android.geometry.LatLng
 @Composable
 fun MapScreen(
     viewModel: MapViewModel,
+    usingSavedData: Boolean,
     onStopDetailsClick: (String) -> Unit,
     onLineClick: (String) -> Unit,
+    onOfflineClick: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -109,7 +112,8 @@ fun MapScreen(
         GradientHeader(
             title = stringResource(R.string.tab_map),
             subtitle = selectedLine?.let { stringResource(R.string.line_title, lineNumber(it.code), it.name) }
-                ?: stringResource(R.string.map_all_stops, state.visibleStops.size)
+                ?: stringResource(R.string.map_all_stops, state.visibleStops.size),
+            actions = { OfflineButton(usingSavedData, onClick = onOfflineClick) }
         ) {
             LineChips(state.lines, selectedLine?.code, viewModel::selectLine)
             EstimateStatus(

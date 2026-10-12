@@ -1,6 +1,8 @@
 package com.the09.kastoriabus.ui.offline
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,16 +13,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,14 +43,23 @@ import java.util.Locale
 /** The panel that slides up from the bottom: "Use without internet". */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OfflineSheet(downloader: OfflineDownloader, onDismiss: () -> Unit) {
+fun OfflineSheet(downloader: OfflineDownloader, usingSavedData: Boolean, onDismiss: () -> Unit) {
     val status by downloader.status.collectAsStateWithLifecycle()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        // Open fully at once (not half-way), so the button at the bottom is visible.
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
-        Column(Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp)) {
+        // Scrollable and clear of the phone's navigation buttons, so the button at the
+        // bottom is always reachable, even on small screens.
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircleIcon(R.drawable.ic_cloud_download)
                 Text(
@@ -54,6 +68,32 @@ fun OfflineSheet(downloader: OfflineDownloader, onDismiss: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 12.dp)
                 )
+            }
+            if (usingSavedData) {
+                // Why the cloud in the header is crossed out.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(12.dp)
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_cloud_off),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        stringResource(R.string.offline_banner),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(start = 10.dp)
+                    )
+                }
             }
             Text(
                 stringResource(R.string.offline_explanation),
@@ -133,28 +173,18 @@ private fun formatDate(millis: Long): String =
     DateTimeFormatter.ofPattern("d/M/yyyy HH:mm", Locale.getDefault())
         .format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()))
 
-/** The dark bar at the bottom when there's no internet and saved data is shown. */
+/**
+ * The cloud at the top right of the Stops, Map and Lines tabs. It opens the
+ * "Use without internet" panel, and is crossed out while saved data is shown
+ * (no internet, or the server isn't answering).
+ */
 @Composable
-fun OfflineBanner(addNavigationBarPadding: Boolean) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.inverseSurface)
-            .then(if (addNavigationBarPadding) Modifier.navigationBarsPadding() else Modifier)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
+fun OfflineButton(usingSavedData: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
         Icon(
-            painterResource(R.drawable.ic_cloud_off),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.inverseOnSurface,
-            modifier = Modifier.size(18.dp)
-        )
-        Text(
-            stringResource(R.string.offline_banner),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.inverseOnSurface,
-            modifier = Modifier.padding(start = 10.dp)
+            painterResource(if (usingSavedData) R.drawable.ic_cloud_off else R.drawable.ic_cloud_download),
+            contentDescription = stringResource(if (usingSavedData) R.string.offline_banner else R.string.offline_title),
+            tint = Color.White
         )
     }
 }
