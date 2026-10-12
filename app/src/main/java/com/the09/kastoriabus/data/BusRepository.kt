@@ -96,7 +96,12 @@ class BusRepository(
             "timetable|$lang|$stopCode|$day", typeOf<List<Trip>>(), forceRefresh,
             fallbackKeys = listOf("timetable|${other(lang)}|$stopCode|$day"),
         ) {
-            downloadPermits.withPermit { api.getStopTimetable(lang, stopCode, day) }
+            val response = downloadPermits.withPermit { api.getStopTimetable(lang, stopCode, day) }
+            when {
+                response.isSuccessful -> response.body() ?: throw IOException("Empty timetable answer")
+                response.code() == 404 -> emptyList() // no buses at this stop on that day
+                else -> throw HttpException(response)
+            }
         }
     }
 
@@ -109,7 +114,14 @@ class BusRepository(
         routePlanCache[key]?.let { return it }
 
         val stops = getRouteStops(routeCode)
-        val shape = getLineShapes(lineCode).firstOrNull { it.routeCode == routeCode }
+        // Without the route drawing (no internet, or the server failed to send it) the
+        // estimate still works: RoutePlanBuilder then joins the stops with straight lines.
+        val shapes = try {
+            getLineShapes(lineCode)
+        } catch (e: IOException) {
+            emptyList()
+        }
+        val shape = shapes.firstOrNull { it.routeCode == routeCode }
             ?.routePoints?.sortedBy { it.sequence }?.map { LatLon(it.latitude, it.longitude) }
             .orEmpty()
         val timesAtAnchors = RoutePlanBuilder.chooseAnchorIndices(stops.map { it.code })

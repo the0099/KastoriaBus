@@ -15,6 +15,7 @@ import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
@@ -39,12 +40,20 @@ class OfflineCacheTest {
         override suspend fun getLines(lang: String) = answer(emptyList<Line>())
         override suspend fun getRouteSequence(lang: String, routeCode: String) = answer(listOf(RouteStop(1, "16044")))
         override suspend fun getLineShapes(lineCode: String) = answer(emptyList<RouteShape>())
-        override suspend fun getStopTimetable(lang: String, stopCode: String, day: Int) = answer(emptyList<Trip>())
+        override suspend fun getStopTimetable(lang: String, stopCode: String, day: Int): Response<List<Trip>> =
+            if (stopCode == "school") answer(Response.error(404, "{}".toResponseBody()))
+            else answer(Response.success(emptyList()))
         override suspend fun getLiveArrivals(lang: String, stopCode: String): Response<LiveResponse> =
             throw UnsupportedOperationException()
     }
 
     private fun repository(api: FakeApi, dir: File) = BusRepository(api, DiskCache(dir)) { "el" }
+
+    @Test
+    fun noBusesThatDayIsAnEmptyTimetableNotAnError() = runBlocking {
+        // The server answers 404 for a school stop on Sunday.
+        assertEquals(emptyList<Trip>(), repository(FakeApi(), folder.root).getTimetable("school", 0))
+    }
 
     @Test
     fun diskCacheRoundTrip() {

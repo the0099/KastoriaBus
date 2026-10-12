@@ -31,7 +31,7 @@ class StarterPackTest {
         override suspend fun getLines(lang: String): List<Line> = throw IOException("no internet")
         override suspend fun getRouteSequence(lang: String, routeCode: String): List<RouteStop> = throw IOException("no internet")
         override suspend fun getLineShapes(lineCode: String): List<RouteShape> = throw IOException("no internet")
-        override suspend fun getStopTimetable(lang: String, stopCode: String, day: Int): List<Trip> = throw IOException("no internet")
+        override suspend fun getStopTimetable(lang: String, stopCode: String, day: Int): Response<List<Trip>> = throw IOException("no internet")
         override suspend fun getLiveArrivals(lang: String, stopCode: String): Response<LiveResponse> = throw IOException("no internet")
     }
 

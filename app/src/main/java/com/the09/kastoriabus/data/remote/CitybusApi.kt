@@ -36,13 +36,17 @@ interface CitybusApi {
     @GET("api/v1/$AGENCY_CODE/lines/{lineCode}/points")
     suspend fun getLineShapes(@Path("lineCode") lineCode: String): List<RouteShape>
 
-    /** [day]: 0 = Sunday, 1 = Monday, ... 6 = Saturday. */
+    /**
+     * [day]: 0 = Sunday, 1 = Monday, ... 6 = Saturday.
+     * Like the live call, it answers 404 when no bus stops here that day (e.g. a school
+     * stop on Sunday), so it's wrapped in Response<> to read that ourselves.
+     */
     @GET("api/v1/{lang}/$AGENCY_CODE/trips/stop/{stopCode}/day/{day}")
     suspend fun getStopTimetable(
         @Path("lang") lang: String,
         @Path("stopCode") stopCode: String,
         @Path("day") day: Int,
-    ): List<Trip>
+    ): Response<List<Trip>>
 
     // Wrapped in Response<> so we can read the 404 ("no buses coming")
     // ourselves instead of Retrofit throwing an exception.

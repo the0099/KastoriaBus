@@ -197,13 +197,16 @@ class MapViewModel(
         if (lineCode == null) return
         lineJob = viewModelScope.launch {
             val result = loadCatching { repository.getLineShapes(lineCode) }
-            if (result is LoadState.Ready) {
-                shapes.value = result.data
-                val points = result.data.flatMap { shape ->
-                    shape.routePoints.map { GeoPoint(it.latitude, it.longitude) }
+            val drawn = (result as? LoadState.Ready)?.data.orEmpty()
+            shapes.value = drawn
+            // Zoom to the route drawing, or to the line's stops if there is no drawing.
+            val points = drawn.flatMap { shape -> shape.routePoints.map { GeoPoint(it.latitude, it.longitude) } }
+                .ifEmpty {
+                    (data.value as? LoadState.Ready)?.data?.first.orEmpty()
+                        .filter { lineCode in it.lineCodes }
+                        .map { GeoPoint(it.latitude, it.longitude) }
                 }
-                if (points.isNotEmpty()) _camera.trySend(CameraCommand.Fit(points))
-            }
+            if (points.isNotEmpty()) _camera.trySend(CameraCommand.Fit(points))
             // One plan per route of the line, downloaded side by side.
             val line = (data.value as? LoadState.Ready)?.data?.second?.firstOrNull { it.code == lineCode }
                 ?: return@launch

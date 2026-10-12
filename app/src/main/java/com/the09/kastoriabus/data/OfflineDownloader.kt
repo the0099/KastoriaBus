@@ -76,9 +76,19 @@ class OfflineDownloader(
     }
 
     private suspend fun downloadData() {
-        // Small things first, always fresh (forceRefresh), because the user asked for an update.
-        val stops = repository.getStops(forceRefresh = true)
-        val lines = repository.getLines(forceRefresh = true)
+        // Small things first, fresh (forceRefresh) because the user asked for an update.
+        // If the server can't give the stop or line list right now (it happened on 2026-10-12),
+        // use the saved or built-in one, so the timetables can still be downloaded.
+        val stops = try {
+            repository.getStops(forceRefresh = true)
+        } catch (e: java.io.IOException) {
+            repository.getStops()
+        }
+        val lines = try {
+            repository.getLines(forceRefresh = true)
+        } catch (e: java.io.IOException) {
+            repository.getLines()
+        }
         val routes = lines.flatMap { it.routes }
 
         val total = 2 + lines.size + routes.size + stops.size * 7
@@ -86,7 +96,15 @@ class OfflineDownloader(
         fun step() = _status.update { it.copy(done = done.incrementAndGet(), total = total) }
         _status.update { it.copy(done = 2, total = total) }
 
-        lines.forEach { repository.getLineShapes(it.code, forceRefresh = true); step() }
+        lines.forEach { line ->
+            // Route drawings only colour the map; if the server can't send them, carry on.
+            try {
+                repository.getLineShapes(line.code, forceRefresh = true)
+            } catch (e: java.io.IOException) {
+                Log.w("KastoriaBus", "No route drawing for line ${line.code}", e)
+            }
+            step()
+        }
         routes.forEach { repository.getRouteStopCodes(it.code, forceRefresh = true); step() }
 
         // The big part: every stop, every day. The repository allows 3 downloads at a time.

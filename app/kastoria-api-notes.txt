@@ -414,6 +414,10 @@ Fields:
   tripTimeHour    hour as number (the site groups the list by this)
   tripTimeMinute  minute as number
 
+  NOTE (found 2026-10-12): when NO bus passes the stop on that day (e.g. school
+  stops 16157/16176 on Sunday), the API answers HTTP 404 with the same
+  "Not Found" JSON as /stops/live. Treat it as an empty timetable, not an error.
+
 -------------------------------------------------------------------------------
 8. "GetViewportInfo"  -  NOT part of the bus API
 -------------------------------------------------------------------------------
