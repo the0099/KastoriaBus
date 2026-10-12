@@ -35,4 +35,4 @@ Key points:
 
 ## Open questions
 - No real example of a non-empty /stops/live response yet (field names are known from the site's JavaScript, see the notes file)
-- Meaning of route "direction" (1 vs 2)
+- Route "direction" (1 vs 2) does NOT mean outbound/return (e.g. round trip 001 and one-way 031 are both 2). Μετάβαση/Επιστροφή is computed in data/RouteDirections.kt from stop positions: most main routes are one round trip ΑΦΕΤΗΡΙΑ → village → ΑΦΕΤΗΡΙΑ, split at the halfway point of the distance travelled

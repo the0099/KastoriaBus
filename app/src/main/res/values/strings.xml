@@ -82,4 +82,10 @@
     <string name="estimate_in_minutes">σε ~%1$d′</string>
     <string name="estimate_note">Εκτιμώμενη θέση με βάση το πρόγραμμα, όχι GPS. Αν το λεωφορείο έχει καθυστέρηση, η θέση θα διαφέρει.</string>
     <string name="estimate_line_note">Οι θέσεις των λεωφορείων είναι εκτίμηση με βάση το πρόγραμμα.</string>
+
+    <!-- Step 5b: outbound / return -->
+    <string name="direction_outbound">Μετάβαση</string>
+    <string name="direction_return">Επιστροφή</string>
+    <string name="direction_title">%1$s · %2$s</string>
+    <string name="direction_from_to">Από %1$s προς %2$s</string>
 </resources>

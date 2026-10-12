@@ -80,4 +80,10 @@
     <string name="estimate_in_minutes">in ~%1$d min</string>
     <string name="estimate_note">Estimated from the timetable, not GPS. If the bus is late, its real position will differ.</string>
     <string name="estimate_line_note">Bus positions are estimated from the timetable.</string>
+
+    <!-- Step 5b: outbound / return -->
+    <string name="direction_outbound">Outbound</string>
+    <string name="direction_return">Return</string>
+    <string name="direction_title">%1$s · %2$s</string>
+    <string name="direction_from_to">From %1$s to %2$s</string>
 </resources>

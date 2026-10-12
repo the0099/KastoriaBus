@@ -23,6 +23,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,8 +47,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.the09.kastoriabus.R
+import com.the09.kastoriabus.data.Direction
 import com.the09.kastoriabus.data.model.Line
-import com.the09.kastoriabus.data.model.Stop
+import com.the09.kastoriabus.data.model.Route
 import com.the09.kastoriabus.ui.common.ErrorView
 import com.the09.kastoriabus.ui.common.FavoriteButton
 import com.the09.kastoriabus.ui.common.GradientHeader
@@ -95,7 +99,17 @@ fun LineDetailScreen(
                     }
                 }
             ) {
-                if (line != null) RouteChips(line, state.selectedRouteCode, viewModel::selectRoute)
+                if (line != null) {
+                    if (state.directions.isNotEmpty()) {
+                        DirectionTabs(
+                            directions = state.directions,
+                            selected = state.selectedDirection,
+                            color = color,
+                            onSelect = viewModel::selectDirection
+                        )
+                    }
+                    RouteChips(line, state.routes, state.selectedRouteCode, viewModel::selectRoute)
+                }
             }
         }
     ) { padding ->
@@ -103,32 +117,85 @@ fun LineDetailScreen(
             LoadState.Loading -> LoadingView(Modifier.padding(padding))
             LoadState.Error -> ErrorView(onRetry = viewModel::retry, modifier = Modifier.padding(padding))
             is LoadState.Ready -> Box(Modifier.fillMaxSize().padding(padding)) {
-                when (val stops = state.stops) {
-                    LoadState.Loading -> LoadingView()
-                    LoadState.Error -> ErrorView(onRetry = viewModel::retry)
-                    is LoadState.Ready -> RouteTimeline(
-                        line = lineState.data,
-                        stops = stops.data,
-                        favoriteStopCodes = state.favoriteStopCodes,
-                        busesByNextStop = state.busesByNextStop,
-                        onStopClick = onStopClick,
-                        onToggleStopFavorite = viewModel::onToggleStopFavorite
-                    )
-                }
+                RouteTimeline(
+                    line = lineState.data,
+                    direction = state.selectedDirection,
+                    stops = state.stops,
+                    favoriteStopCodes = state.favoriteStopCodes,
+                    busesByNextStop = state.busesByNextStop,
+                    onStopClick = onStopClick,
+                    onToggleStopFavorite = viewModel::onToggleStopFavorite
+                )
             }
         }
     }
 }
 
-/** One white chip per route variant of the line, on the coloured header. */
+/** The Μετάβαση | Επιστροφή switch at the top of the line screen. */
 @Composable
-private fun RouteChips(line: Line, selectedRouteCode: String?, onSelect: (String) -> Unit) {
+private fun DirectionTabs(
+    directions: List<Direction>,
+    selected: Direction?,
+    color: Color,
+    onSelect: (Direction) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.18f))
+            .padding(4.dp)
+    ) {
+        // Always show both tabs; one that this line doesn't have is greyed out.
+        Direction.entries.forEach { direction ->
+            val available = direction in directions
+            val isSelected = direction == selected
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(CircleShape)
+                    .background(if (isSelected) Color.White else Color.Transparent)
+                    .clickable(enabled = available) { onSelect(direction) }
+                    .padding(vertical = 10.dp)
+            ) {
+                val tint = when {
+                    isSelected -> color
+                    available -> Color.White
+                    else -> Color.White.copy(alpha = 0.4f)
+                }
+                Icon(
+                    if (direction == Direction.OUTBOUND) Icons.AutoMirrored.Filled.ArrowForward
+                    else Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    stringResource(directionLabel(direction)),
+                    color = tint,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun directionLabel(direction: Direction) =
+    if (direction == Direction.OUTBOUND) R.string.direction_outbound else R.string.direction_return
+
+/** One white chip per route variant that runs in the chosen direction, on the coloured header. */
+@Composable
+private fun RouteChips(line: Line, routes: List<Route>, selectedRouteCode: String?, onSelect: (String) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(top = 4.dp)
     ) {
-        items(line.routes, key = { it.code }) { route ->
+        items(routes, key = { it.code }) { route ->
             FilterChip(
                 selected = route.code == selectedRouteCode,
                 onClick = { onSelect(route.code) },
@@ -150,7 +217,8 @@ private fun RouteChips(line: Line, selectedRouteCode: String?, onSelect: (String
 @Composable
 private fun RouteTimeline(
     line: Line,
-    stops: List<Stop>,
+    direction: Direction?,
+    stops: List<TimelineStop>,
     favoriteStopCodes: Set<String>,
     busesByNextStop: Map<Int, Int>,
     onStopClick: (String) -> Unit,
@@ -159,7 +227,20 @@ private fun RouteTimeline(
     val color = lineColor(line.code, line.color)
     LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
         item(key = "count") {
-            SectionTitle(pluralStringResource(R.plurals.route_stop_count, stops.size, stops.size))
+            val count = pluralStringResource(R.plurals.route_stop_count, stops.size, stops.size)
+            SectionTitle(
+                if (direction == null) count
+                else stringResource(R.string.direction_title, stringResource(directionLabel(direction)), count)
+            )
+            // "From ΑΦΕΤΗΡΙΑ to ΜΕΣΟΠΟΤΑΜΙΑ ΠΛΑΤΕΙΑ"
+            if (stops.size >= 2) {
+                Text(
+                    stringResource(R.string.direction_from_to, stops.first().stop.name, stops.last().stop.name),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 32.dp, end = 20.dp, bottom = 4.dp)
+                )
+            }
         }
         if (busesByNextStop.isNotEmpty()) {
             item(key = "estimate") {
@@ -187,7 +268,8 @@ private fun RouteTimeline(
             }
         }
         // The same stop code can appear twice in a circular route, so the key includes the position.
-        itemsIndexed(stops, key = { index, stop -> "$index-${stop.code}" }) { index, stop ->
+        itemsIndexed(stops, key = { _, row -> "${row.routeIndex}-${row.stop.code}" }) { index, row ->
+            val stop = row.stop
             val isEnd = index == 0 || index == stops.lastIndex
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -234,7 +316,7 @@ private fun RouteTimeline(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                busesByNextStop[index]?.let { seconds -> BusComingPill(seconds, color) }
+                busesByNextStop[row.routeIndex]?.let { seconds -> BusComingPill(seconds, color) }
                 FavoriteButton(
                     isFavorite = stop.code in favoriteStopCodes,
                     onClick = { onToggleStopFavorite(stop.code) }
